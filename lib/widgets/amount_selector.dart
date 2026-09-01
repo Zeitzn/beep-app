@@ -46,6 +46,7 @@ class _AmountSelectorState extends State<AmountSelector> {
       _selectedIndex = index;
       _inputController.clear();
     });
+    _inputFocusNode.unfocus();
     _emitAmount();
   }
 
