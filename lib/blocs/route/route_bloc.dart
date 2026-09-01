@@ -80,6 +80,8 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
         return;
       }
 
+      emit(state.copyWith(isLoading: true));
+
       final position = await location.getCurrentPosition();
       final route = RouteModel(
         uuid: _uuid.v4(),
@@ -94,10 +96,12 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
 
       emit(state.copyWith(
         currentRoute: () => route,
+        isLoading: false,
         error: () => null,
       ));
     } catch (e) {
       emit(state.copyWith(
+        isLoading: false,
         error: () => 'Error al obtener ubicación: $e',
       ));
     }
@@ -110,6 +114,8 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     if (state.currentRoute == null) return;
 
     try {
+      emit(state.copyWith(isLoading: true));
+
       final position = await location.getCurrentPosition();
       final completed = state.currentRoute!.copyWith(
         endLat: position.latitude,
@@ -123,10 +129,12 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
       emit(state.copyWith(
         routes: updatedRoutes,
         currentRoute: () => null,
+        isLoading: false,
         error: () => null,
       ));
     } catch (e) {
       emit(state.copyWith(
+        isLoading: false,
         error: () => 'Error al finalizar ruta: $e',
       ));
     }

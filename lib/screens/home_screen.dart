@@ -148,6 +148,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       },
       builder: (context, state) {
         final enRuta = state.currentRoute != null;
+        final calculating = state.isLoading;
+
+        final label = calculating
+            ? 'Calculando...'
+            : (enRuta ? 'Terminar ruta' : 'Iniciar ruta');
 
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -160,24 +165,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      context.read<RouteBloc>().add(const RouteEnded());
-                    },
+                    onPressed: calculating
+                        ? null
+                        : () {
+                            context
+                                .read<RouteBloc>()
+                                .add(const RouteEnded());
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade500,
+                      disabledBackgroundColor: Colors.red.shade500,
                       foregroundColor: Colors.white,
+                      disabledForegroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Terminar ruta',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _buttonChild(label, calculating, Colors.white),
                   ),
                 )
               : SizedBox(
@@ -185,35 +190,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _selectedAmount != null
-                        ? () {
+                    onPressed: (calculating || _selectedAmount == null)
+                        ? null
+                        : () {
                             context
                                 .read<RouteBloc>()
                                 .add(RouteStarted(_selectedAmount!));
-                          }
-                        : null,
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: purple,
-                      disabledBackgroundColor: purple.withValues(alpha: 0.25),
+                      disabledBackgroundColor: calculating
+                          ? purple
+                          : purple.withValues(alpha: 0.25),
                       foregroundColor: Colors.white,
-                      disabledForegroundColor:
-                          Colors.white.withValues(alpha: 0.6),
+                      disabledForegroundColor: calculating
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: _selectedAmount != null ? 2 : 0,
+                      elevation:
+                          (calculating && _selectedAmount != null) ? 2 : 0,
                     ),
-                    child: const Text(
-                      'Iniciar ruta',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _buttonChild(label, calculating, Colors.white),
                   ),
                 ),
         );
       },
+    );
+  }
+
+  Widget _buttonChild(String label, bool calculating, Color color) {
+    if (!calculating) {
+      return Text(
+        label,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
