@@ -7,6 +7,8 @@ class RouteModel {
   final double endLat;
   final double endLng;
   final double amount;
+  final DateTime startDateTime;
+  final DateTime? endDateTime;
   final bool uploaded;
 
   const RouteModel({
@@ -16,6 +18,8 @@ class RouteModel {
     required this.endLat,
     required this.endLng,
     required this.amount,
+    required this.startDateTime,
+    this.endDateTime,
     required this.uploaded,
   });
 
@@ -26,6 +30,8 @@ class RouteModel {
     double? endLat,
     double? endLng,
     double? amount,
+    DateTime? startDateTime,
+    DateTime? endDateTime,
     bool? uploaded,
   }) {
     return RouteModel(
@@ -35,6 +41,8 @@ class RouteModel {
       endLat: endLat ?? this.endLat,
       endLng: endLng ?? this.endLng,
       amount: amount ?? this.amount,
+      startDateTime: startDateTime ?? this.startDateTime,
+      endDateTime: endDateTime ?? this.endDateTime,
       uploaded: uploaded ?? this.uploaded,
     );
   }
@@ -47,6 +55,8 @@ class RouteModel {
       'endLat': endLat,
       'endLng': endLng,
       'amount': amount,
+      'startDateTime': startDateTime.toIso8601String(),
+      'endDateTime': endDateTime?.toIso8601String(),
       'uploaded': uploaded,
     };
   }
@@ -59,6 +69,9 @@ class RouteModel {
       endLat: (json['endLat'] as num).toDouble(),
       endLng: (json['endLng'] as num).toDouble(),
       amount: (json['amount'] as num).toDouble(),
+      startDateTime:
+          DateTime.tryParse(json['startDateTime'] ?? '') ?? DateTime.now(),
+      endDateTime: DateTime.tryParse(json['endDateTime'] ?? ''),
       uploaded: json['uploaded'] as bool,
     );
   }

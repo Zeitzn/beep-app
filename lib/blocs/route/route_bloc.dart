@@ -88,6 +88,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
         endLat: 0,
         endLng: 0,
         amount: event.amount,
+        startDateTime: DateTime.now(),
         uploaded: false,
       );
 
@@ -113,6 +114,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
       final completed = state.currentRoute!.copyWith(
         endLat: position.latitude,
         endLng: position.longitude,
+        endDateTime: DateTime.now(),
       );
 
       final updatedRoutes = [...state.routes, completed];

@@ -77,21 +77,29 @@ class RouteTable extends StatelessWidget {
           Expanded(
             flex: 3,
             child: Text(
-              'Inicio',
+              'Desde',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
-              'Fin',
+              'Hasta',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
-              'Sync',
+              'Inicio',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Fin',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
@@ -151,18 +159,32 @@ class RouteTable extends StatelessWidget {
           ),
           Expanded(
             flex: 2,
-            child: Icon(
-              route.uploaded
-                  ? Icons.check_circle
-                  : Icons.cancel,
-              size: 18,
-              color: route.uploaded
-                  ? Colors.green.shade600
-                  : Colors.red.shade300,
+            child: Text(
+              _formatDateTime(route.startDateTime),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              route.endDateTime != null
+                  ? _formatDateTime(route.endDateTime!)
+                  : '-',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$day/$month $hour:$minute';
   }
 }
