@@ -5,6 +5,10 @@ class LocationService {
     return Geolocator.isLocationServiceEnabled();
   }
 
+  Stream<ServiceStatus> serviceStatusStream() {
+    return Geolocator.getServiceStatusStream();
+  }
+
   Future<Position> getCurrentPosition() {
     return Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(

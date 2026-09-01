@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
@@ -11,6 +13,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
   final StorageService storage;
   final LocationService location;
   final _uuid = const Uuid();
+  StreamSubscription<ServiceStatus>? _serviceStatusSub;
 
   RouteBloc({
     required this.storage,
@@ -21,6 +24,16 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     on<RouteEnded>(_onRouteEnded);
     on<GpsStatusChecked>(_onGpsStatusChecked);
     on<GpsSettingsOpened>(_onGpsSettingsOpened);
+
+    _serviceStatusSub = location.serviceStatusStream().listen((_) {
+      add(const GpsStatusChecked());
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _serviceStatusSub?.cancel();
+    return super.close();
   }
 
   Future<void> _onRoutesLoaded(
