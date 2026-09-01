@@ -16,6 +16,7 @@ class AmountSelector extends StatefulWidget {
 }
 
 class _AmountSelectorState extends State<AmountSelector> {
+  static const _fieldSize = 64.0;
   int? _selectedIndex;
   final _inputController = TextEditingController();
   final _inputFocusNode = FocusNode();
@@ -84,6 +85,7 @@ class _AmountSelectorState extends State<AmountSelector> {
           if (i > 0) const SizedBox(width: 12),
           _NumberButton(
             value: widget.presetValues[i],
+            size: _fieldSize,
             isSelected: _selectedIndex == i && !_inputFocused,
             onTap: () => _onPresetTap(i),
           ),
@@ -91,7 +93,7 @@ class _AmountSelectorState extends State<AmountSelector> {
         const SizedBox(width: 12),
         Expanded(
           child: SizedBox(
-            height: 64,
+            height: _fieldSize,
             child: TextField(
               controller: _inputController,
               focusNode: _inputFocusNode,
@@ -112,13 +114,9 @@ class _AmountSelectorState extends State<AmountSelector> {
                   fontWeight: FontWeight.w500,
                   color: Colors.grey.shade400,
                 ),
-                filled: true,
-                fillColor: (_inputFocused ||
-                        (_selectedIndex == null &&
-                            _inputController.text.isNotEmpty))
-                    ? purple
-                    : Colors.white,
-                contentPadding: EdgeInsets.zero,
+                isCollapsed: true,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 20),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -152,11 +150,13 @@ class _AmountSelectorState extends State<AmountSelector> {
 
 class _NumberButton extends StatelessWidget {
   final int value;
+  final double size;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _NumberButton({
     required this.value,
+    required this.size,
     required this.isSelected,
     required this.onTap,
   });
@@ -170,8 +170,8 @@ class _NumberButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 64,
-        height: 64,
+        width: size,
+        height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? purple : Colors.white,
