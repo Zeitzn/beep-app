@@ -43,9 +43,11 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     emit(state.copyWith(isLoading: true));
     try {
       final routes = await storage.loadRoutes();
+      final currentRoute = await storage.loadCurrentRoute();
       final gpsEnabled = await location.isGpsEnabled();
       emit(state.copyWith(
         routes: routes,
+        currentRoute: () => currentRoute,
         gpsEnabled: gpsEnabled,
         isLoading: false,
       ));
@@ -99,6 +101,14 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
         isLoading: false,
         error: () => null,
       ));
+
+      try {
+        await storage.saveCurrentRoute(route);
+      } catch (e) {
+        emit(state.copyWith(
+          error: () => 'Error al guardar la ruta en proceso: $e',
+        ));
+      }
     } catch (e) {
       emit(state.copyWith(
         isLoading: false,
@@ -125,6 +135,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
 
       final updatedRoutes = [...state.routes, completed];
       await storage.saveRoutes(updatedRoutes);
+      await storage.clearCurrentRoute();
 
       emit(state.copyWith(
         routes: updatedRoutes,
