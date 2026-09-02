@@ -45,87 +45,84 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5FC),
       body: SafeArea(
-        child: Column(
-          children: [
-            const GpsWarningBanner(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 48),
-                    Text(
-                      'Beep',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
-                        color: purple,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    BlocBuilder<RouteBloc, RouteState>(
-                      buildWhen: (prev, curr) =>
-                          prev.currentRoute != curr.currentRoute,
-                      builder: (context, state) {
-                        final enRuta = state.currentRoute != null;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: enRuta
-                                ? Colors.green.shade50
-                                : purpleLight.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                enRuta
-                                    ? Icons.directions_bus
-                                    : Icons.check_circle_outline,
-                                size: 20,
-                                color: enRuta
-                                    ? Colors.green.shade700
-                                    : purple,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                enRuta ? 'En ruta' : 'Disponible',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: enRuta
-                                      ? Colors.green.shade700
-                                      : purple,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 40),
-                    AmountSelector(
-                      onAmountSelected: (amount) {
-                        setState(() {
-                          _selectedAmount = amount;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 40),
-                    _buildActionButtons(purple),
-                    const SizedBox(height: 40),
-                    const RouteTable(),
-                    const SizedBox(height: 32),
-                  ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            children: [
+              const GpsWarningBanner(),
+              const SizedBox(height: 48),
+              Text(
+                'Beep',
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w800,
+                  color: purple,
+                  letterSpacing: -1,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              BlocBuilder<RouteBloc, RouteState>(
+                buildWhen: (prev, curr) =>
+                    prev.currentRoute != curr.currentRoute,
+                builder: (context, state) {
+                  final enRuta = state.currentRoute != null;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: enRuta
+                          ? Colors.green.shade50
+                          : purpleLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          enRuta
+                              ? Icons.directions_bus
+                              : Icons.check_circle_outline,
+                          size: 20,
+                          color: enRuta
+                              ? Colors.green.shade700
+                              : purple,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          enRuta ? 'En ruta' : 'Disponible',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: enRuta
+                                ? Colors.green.shade700
+                                : purple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 40),
+              AmountSelector(
+                onAmountSelected: (amount) {
+                  setState(() {
+                    _selectedAmount = amount;
+                  });
+                },
+              ),
+              const SizedBox(height: 40),
+              _buildActionButtons(purple),
+              const SizedBox(height: 40),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: const RouteTable(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
