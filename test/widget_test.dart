@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:beep/blocs/route/route_bloc.dart';
 import 'package:beep/screens/home_screen.dart';
+import 'package:beep/services/local_route_data_source.dart';
 import 'package:beep/services/location_service.dart';
+import 'package:beep/services/route_data_source.dart';
 import 'package:beep/services/storage_service.dart';
 
 void main() {
@@ -23,6 +25,9 @@ void main() {
         providers: [
           RepositoryProvider.value(value: StorageService()),
           RepositoryProvider.value(value: LocationService()),
+          RepositoryProvider<RouteDataSource>.value(
+            value: LocalRouteDataSource(storage: StorageService()),
+          ),
         ],
         child: BlocProvider.value(
           value: bloc,

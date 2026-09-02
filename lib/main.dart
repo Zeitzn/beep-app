@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'blocs/route/route_bloc.dart';
 import 'blocs/route/route_event.dart';
 import 'screens/home_screen.dart';
+import 'services/local_route_data_source.dart';
 import 'services/location_service.dart';
+import 'services/route_data_source.dart';
 import 'services/storage_service.dart';
 
 void main() async {
@@ -16,6 +18,9 @@ void main() async {
       providers: [
         RepositoryProvider.value(value: storageService),
         RepositoryProvider.value(value: locationService),
+        RepositoryProvider<RouteDataSource>.value(
+          value: LocalRouteDataSource(storage: storageService),
+        ),
       ],
       child: BlocProvider(
         create: (_) => RouteBloc(

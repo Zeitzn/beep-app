@@ -3,8 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/route/route_bloc.dart';
 import '../blocs/route/route_event.dart';
 import '../blocs/route/route_state.dart';
+import '../services/location_service.dart';
+import '../services/route_data_source.dart';
 import '../widgets/amount_selector.dart';
 import '../widgets/gps_warning_banner.dart';
+import '../widgets/map_button.dart';
 import '../widgets/route_table.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -151,67 +154,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ? 'Calculando...'
             : (enRuta ? 'Terminar ruta' : 'Iniciar ruta');
 
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) {
-            return ScaleTransition(scale: animation, child: child);
-          },
-          child: enRuta
-              ? SizedBox(
-                  key: const ValueKey('end'),
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: calculating
-                        ? null
-                        : () {
-                            context
-                                .read<RouteBloc>()
-                                .add(const RouteEnded());
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade500,
-                      disabledBackgroundColor: Colors.red.shade500,
-                      foregroundColor: Colors.white,
-                      disabledForegroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(scale: animation, child: child);
+              },
+              child: enRuta
+                  ? SizedBox(
+                      key: const ValueKey('end'),
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: calculating
+                            ? null
+                            : () {
+                                context
+                                    .read<RouteBloc>()
+                                    .add(const RouteEnded());
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade500,
+                          disabledBackgroundColor: Colors.red.shade500,
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _buttonChild(label, calculating, Colors.white),
                       ),
-                      elevation: 0,
-                    ),
-                    child: _buttonChild(label, calculating, Colors.white),
-                  ),
-                )
-              : SizedBox(
-                  key: const ValueKey('start'),
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: (calculating || _selectedAmount == null)
-                        ? null
-                        : () {
-                            context
-                                .read<RouteBloc>()
-                                .add(RouteStarted(_selectedAmount!));
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: purple,
-                      disabledBackgroundColor: calculating
-                          ? purple
-                          : purple.withValues(alpha: 0.25),
-                      foregroundColor: Colors.white,
-                      disabledForegroundColor: calculating
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    )
+                  : SizedBox(
+                      key: const ValueKey('start'),
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: (calculating || _selectedAmount == null)
+                            ? null
+                            : () {
+                                context
+                                    .read<RouteBloc>()
+                                    .add(RouteStarted(_selectedAmount!));
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: purple,
+                          disabledBackgroundColor: calculating
+                              ? purple
+                              : purple.withValues(alpha: 0.25),
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: calculating
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: (calculating && _selectedAmount != null)
+                              ? 2
+                              : 0,
+                        ),
+                        child: _buttonChild(label, calculating, Colors.white),
                       ),
-                      elevation:
-                          (calculating && _selectedAmount != null) ? 2 : 0,
                     ),
-                    child: _buttonChild(label, calculating, Colors.white),
-                  ),
-                ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Builder(
+                builder: (innerContext) {
+                  final location = RepositoryProvider.of<LocationService>(
+                    innerContext,
+                  );
+                  final dataSource =
+                      RepositoryProvider.of<RouteDataSource>(innerContext);
+                  return MapButton(
+                    enabled: state.routes.isNotEmpty,
+                    location: location,
+                    dataSource: dataSource,
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
