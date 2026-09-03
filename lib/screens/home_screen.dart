@@ -55,37 +55,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: [
               const GpsWarningBanner(),
               const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.topRight,
-                child: BlocBuilder<RouteBloc, RouteState>(
-                  buildWhen: (prev, curr) => prev.placa != curr.placa,
-                  builder: (context, state) {
-                    final placa = state.placa.trim();
-                    if (placa.isEmpty) return const SizedBox.shrink();
-                    return ActionChip(
-                      avatar: const Icon(Icons.directions_bus, size: 18),
-                      label: Text(
-                        placa,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      backgroundColor: Colors.white,
-                      side: BorderSide(color: purple.withValues(alpha: 0.3)),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => PlacaScreen(
-                              placaPrevia: placa,
-                              isEditing: true,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildSyncIcon(purple),
+                  _buildPlacaChip(purple),
+                ],
               ),
               const SizedBox(height: 24),
               Text(
@@ -162,6 +138,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSyncIcon(Color purple) {
+    return BlocBuilder<RouteBloc, RouteState>(
+      buildWhen: (prev, curr) => prev.routes != curr.routes,
+      builder: (context, state) {
+        final hasPending = state.routes.any((r) => !r.uploaded);
+        final hasRoutes = state.routes.isNotEmpty;
+        return IconButton(
+          onPressed: hasRoutes && hasPending
+              ? () {
+                  context
+                      .read<RouteBloc>()
+                      .add(const TripsSyncRequested());
+                }
+              : null,
+          tooltip: hasPending ? 'Sincronizar viajes' : 'Viajes sincronizados',
+          icon: Icon(
+            hasPending ? Icons.cloud_sync : Icons.cloud_done,
+            color: hasPending ? purple : Colors.grey.shade400,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlacaChip(Color purple) {
+    return BlocBuilder<RouteBloc, RouteState>(
+      buildWhen: (prev, curr) => prev.placa != curr.placa,
+      builder: (context, state) {
+        final placa = state.placa.trim();
+        if (placa.isEmpty) return const SizedBox.shrink();
+        return ActionChip(
+          avatar: const Icon(Icons.directions_bus, size: 18),
+          label: Text(
+            placa,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          side: BorderSide(color: purple.withValues(alpha: 0.3)),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PlacaScreen(
+                  placaPrevia: placa,
+                  isEditing: true,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

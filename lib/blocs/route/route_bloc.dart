@@ -33,6 +33,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     on<GpsSettingsOpened>(_onGpsSettingsOpened);
     on<PlacaChanged>(_onPlacaChanged);
     on<TripsSynced>(_onTripsSynced);
+    on<TripsSyncRequested>(_syncPending);
 
     _serviceStatusSub = location.serviceStatusStream().listen((_) {
       add(const GpsStatusChecked());
@@ -44,11 +45,16 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
   }
 
   void _scheduleSync() {
-    _syncPending();
-    _syncTimer = Timer.periodic(_syncInterval, (_) => _syncPending());
+    add(const TripsSyncRequested());
+    _syncTimer = Timer.periodic(_syncInterval, (_) {
+      add(const TripsSyncRequested());
+    });
   }
 
-  Future<void> _syncPending() async {
+  Future<void> _syncPending(
+    TripsSyncRequested event,
+    Emitter<RouteState> emit,
+  ) async {
     final api = tripApi;
     if (api == null || _syncing) return;
     _syncing = true;

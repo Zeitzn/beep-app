@@ -51,3 +51,7 @@ final class TripsSynced extends RouteEvent {
   @override
   List<Object?> get props => [routes];
 }
+
+final class TripsSyncRequested extends RouteEvent {
+  const TripsSyncRequested();
+}
