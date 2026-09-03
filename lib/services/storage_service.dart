@@ -6,6 +6,7 @@ import '../models/route_model.dart';
 class StorageService {
   static const _key = 'routes';
   static const _currentRouteKey = 'current_route';
+  static const _placaKey = 'placa';
 
   Future<void> saveRoutes(List<RouteModel> routes) async {
     final prefs = await SharedPreferences.getInstance();
@@ -34,5 +35,15 @@ class StorageService {
   Future<void> clearCurrentRoute() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_currentRouteKey);
+  }
+
+  Future<void> savePlaca(String placa) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_placaKey, placa);
+  }
+
+  Future<String> loadPlaca() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_placaKey) ?? '';
   }
 }

@@ -7,6 +7,7 @@ class RouteState extends Equatable {
   final bool gpsEnabled;
   final bool isLoading;
   final String? error;
+  final String placa;
 
   const RouteState({
     this.routes = const [],
@@ -14,6 +15,7 @@ class RouteState extends Equatable {
     this.gpsEnabled = false,
     this.isLoading = false,
     this.error,
+    this.placa = '',
   });
 
   RouteState copyWith({
@@ -22,6 +24,7 @@ class RouteState extends Equatable {
     bool? gpsEnabled,
     bool? isLoading,
     String? Function()? error,
+    String? placa,
   }) {
     return RouteState(
       routes: routes ?? this.routes,
@@ -30,10 +33,11 @@ class RouteState extends Equatable {
       gpsEnabled: gpsEnabled ?? this.gpsEnabled,
       isLoading: isLoading ?? this.isLoading,
       error: error != null ? error() : this.error,
+      placa: placa ?? this.placa,
     );
   }
 
   @override
   List<Object?> get props =>
-      [routes, currentRoute, gpsEnabled, isLoading, error];
+      [routes, currentRoute, gpsEnabled, isLoading, error, placa];
 }

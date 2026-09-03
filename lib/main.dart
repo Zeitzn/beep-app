@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'blocs/route/route_bloc.dart';
 import 'blocs/route/route_event.dart';
+import 'blocs/route/route_state.dart';
 import 'screens/home_screen.dart';
+import 'screens/placa_screen.dart';
 import 'services/local_route_data_source.dart';
 import 'services/location_service.dart';
 import 'services/route_data_source.dart';
@@ -27,28 +29,36 @@ void main() async {
           storage: storageService,
           location: locationService,
         )..add(const RoutesLoaded()),
-        child: const MyApp(),
+        child: MaterialApp(
+          title: 'Beep',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+          home: const RootScreen(),
+        ),
       ),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class RootScreen extends StatelessWidget {
+  const RootScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Beep',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
+    return BlocBuilder<RouteBloc, RouteState>(
+      builder: (context, state) {
+        final placaVacia = state.placa.trim().isEmpty;
+        if (placaVacia) {
+          return const PlacaScreen();
+        }
+        return const HomeScreen();
+      },
     );
   }
 }

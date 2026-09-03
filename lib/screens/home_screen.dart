@@ -5,6 +5,7 @@ import '../blocs/route/route_event.dart';
 import '../blocs/route/route_state.dart';
 import '../services/location_service.dart';
 import '../services/route_data_source.dart';
+import 'placa_screen.dart';
 import '../widgets/amount_selector.dart';
 import '../widgets/gps_warning_banner.dart';
 import '../widgets/map_button.dart';
@@ -53,7 +54,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: Column(
             children: [
               const GpsWarningBanner(),
-              const SizedBox(height: 48),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.topRight,
+                child: BlocBuilder<RouteBloc, RouteState>(
+                  buildWhen: (prev, curr) => prev.placa != curr.placa,
+                  builder: (context, state) {
+                    final placa = state.placa.trim();
+                    if (placa.isEmpty) return const SizedBox.shrink();
+                    return ActionChip(
+                      avatar: const Icon(Icons.directions_bus, size: 18),
+                      label: Text(
+                        placa,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      backgroundColor: Colors.white,
+                      side: BorderSide(color: purple.withValues(alpha: 0.3)),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PlacaScreen(
+                              placaPrevia: placa,
+                              isEditing: true,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
               Text(
                 'Beep',
                 style: TextStyle(
@@ -149,6 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (context, state) {
         final enRuta = state.currentRoute != null;
         final calculating = state.isLoading;
+        final placaVacia = state.placa.trim().isEmpty;
 
         final label = calculating
             ? 'Calculando...'
@@ -194,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: (calculating || _selectedAmount == null)
+                        onPressed: (calculating || placaVacia || _selectedAmount == null)
                             ? null
                             : () {
                                 context

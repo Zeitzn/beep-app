@@ -31,3 +31,12 @@ final class GpsStatusChecked extends RouteEvent {
 final class GpsSettingsOpened extends RouteEvent {
   const GpsSettingsOpened();
 }
+
+final class PlacaChanged extends RouteEvent {
+  final String placa;
+
+  const PlacaChanged(this.placa);
+
+  @override
+  List<Object?> get props => [placa];
+}

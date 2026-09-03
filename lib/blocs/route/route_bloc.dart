@@ -24,6 +24,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     on<RouteEnded>(_onRouteEnded);
     on<GpsStatusChecked>(_onGpsStatusChecked);
     on<GpsSettingsOpened>(_onGpsSettingsOpened);
+    on<PlacaChanged>(_onPlacaChanged);
 
     _serviceStatusSub = location.serviceStatusStream().listen((_) {
       add(const GpsStatusChecked());
@@ -45,10 +46,12 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
       final routes = await storage.loadRoutes();
       final currentRoute = await storage.loadCurrentRoute();
       final gpsEnabled = await location.isGpsEnabled();
+      final placa = await storage.loadPlaca();
       emit(state.copyWith(
         routes: routes,
         currentRoute: () => currentRoute,
         gpsEnabled: gpsEnabled,
+        placa: placa,
         isLoading: false,
       ));
     } catch (e) {
@@ -164,5 +167,13 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     Emitter<RouteState> emit,
   ) async {
     await location.openGpsSettings();
+  }
+
+  Future<void> _onPlacaChanged(
+    PlacaChanged event,
+    Emitter<RouteState> emit,
+  ) async {
+    emit(state.copyWith(placa: event.placa));
+    await storage.savePlaca(event.placa);
   }
 }
