@@ -71,12 +71,11 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
       await api.sendTrips(owner: owner, routes: pending);
 
       final pendingIds = pending.map((r) => r.uuid).toSet();
-      final updated = routes
-          .map((r) =>
-              pendingIds.contains(r.uuid) ? r.copyWith(uploaded: true) : r)
+      final remaining = routes
+          .where((r) => !pendingIds.contains(r.uuid))
           .toList();
-      await storage.saveRoutes(updated);
-      add(TripsSynced(updated));
+      await storage.saveRoutes(remaining);
+      add(TripsSynced(remaining));
     } catch (_) {
     } finally {
       _syncing = false;

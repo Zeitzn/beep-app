@@ -145,20 +145,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return BlocBuilder<RouteBloc, RouteState>(
       buildWhen: (prev, curr) => prev.routes != curr.routes,
       builder: (context, state) {
-        final hasPending = state.routes.any((r) => !r.uploaded);
         final hasRoutes = state.routes.isNotEmpty;
         return IconButton(
-          onPressed: hasRoutes && hasPending
+          onPressed: hasRoutes
               ? () {
-                  context
-                      .read<RouteBloc>()
-                      .add(const TripsSyncRequested());
+                  context.read<RouteBloc>().add(const TripsSyncRequested());
                 }
               : null,
-          tooltip: hasPending ? 'Sincronizar viajes' : 'Viajes sincronizados',
+          tooltip: hasRoutes ? 'Sincronizar viajes' : 'Viajes sincronizados',
           icon: Icon(
-            hasPending ? Icons.cloud_sync : Icons.cloud_done,
-            color: hasPending ? purple : Colors.grey.shade400,
+            hasRoutes ? Icons.cloud_sync : Icons.cloud_done,
+            color: hasRoutes ? purple : Colors.grey.shade400,
           ),
         );
       },
@@ -288,23 +285,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
             ),
-            const SizedBox(height: 16),
-            Center(
-              child: Builder(
-                builder: (innerContext) {
-                  final location = RepositoryProvider.of<LocationService>(
-                    innerContext,
-                  );
-                  final dataSource =
-                      RepositoryProvider.of<RouteDataSource>(innerContext);
-                  return MapButton(
-                    enabled: state.routes.isNotEmpty,
-                    location: location,
-                    dataSource: dataSource,
-                  );
-                },
-              ),
-            ),
+            // const SizedBox(height: 16),
+            // Center(
+            //   child: Builder(
+            //     builder: (innerContext) {
+            //       final location = RepositoryProvider.of<LocationService>(
+            //         innerContext,
+            //       );
+            //       final dataSource =
+            //           RepositoryProvider.of<RouteDataSource>(innerContext);
+            //       return MapButton(
+            //         enabled: state.routes.isNotEmpty,
+            //         location: location,
+            //         dataSource: dataSource,
+            //       );
+            //     },
+            //   ),
+            // ),
           ],
         );
       },

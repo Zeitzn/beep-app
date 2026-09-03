@@ -46,9 +46,10 @@ class RouteTable extends StatelessWidget {
               child: Column(
                 children: [
                   _buildHeader(purple),
-                  if (hasCurrentRoute) _buildRow(state.currentRoute!, purple, isActive: true),
-                  for (final route in state.routes.reversed)
-                    _buildRow(route, purple),
+                  if (hasCurrentRoute)
+                    _buildRow(1, state.currentRoute!, purple, isActive: true),
+                  for (final (i, route) in state.routes.reversed.indexed)
+                    _buildRow((hasCurrentRoute ? i + 2 : i + 1), route, purple),
                 ],
               ),
             ),
@@ -68,12 +69,19 @@ class RouteTable extends StatelessWidget {
       child: const Row(
         children: [
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Text(
-              'Monto',
+              'N°',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
+          // Expanded(
+          //   flex: 2,
+          //   child: Text(
+          //     'Monto',
+          //     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          //   ),
+          // ),
           Expanded(
             flex: 3,
             child: Text(
@@ -110,6 +118,7 @@ class RouteTable extends StatelessWidget {
   }
 
   Widget _buildRow(
+    int index,
     RouteModel route,
     Color purple, {
     bool isActive = false,
@@ -128,9 +137,9 @@ class RouteTable extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Text(
-              route.amount.toStringAsFixed(0),
+              '$index',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -138,6 +147,17 @@ class RouteTable extends StatelessWidget {
               ),
             ),
           ),
+          // Expanded(
+          //   flex: 2,
+          //   child: Text(
+          //     route.amount.toStringAsFixed(0),
+          //     style: TextStyle(
+          //       fontSize: 13,
+          //       fontWeight: FontWeight.w600,
+          //       color: isActive ? Colors.green.shade700 : null,
+          //     ),
+          //   ),
+          // ),
           Expanded(
             flex: 3,
             child: Text(
