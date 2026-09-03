@@ -3,12 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/route/route_bloc.dart';
 import '../blocs/route/route_event.dart';
 import '../blocs/route/route_state.dart';
-import '../services/location_service.dart';
-import '../services/route_data_source.dart';
 import 'placa_screen.dart';
 import '../widgets/amount_selector.dart';
 import '../widgets/gps_warning_banner.dart';
-import '../widgets/map_button.dart';
 import '../widgets/route_table.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -49,95 +46,173 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5FC),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            children: [
-              const GpsWarningBanner(),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildSyncIcon(purple),
-                  _buildPlacaChip(purple),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Beep',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w800,
-                  color: purple,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              BlocBuilder<RouteBloc, RouteState>(
-                buildWhen: (prev, curr) =>
-                    prev.currentRoute != curr.currentRoute,
-                builder: (context, state) {
-                  final enRuta = state.currentRoute != null;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                  const GpsWarningBanner(),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _buildSyncIcon(purple),
+                      _buildPlacaChip(purple),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    'Beep',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w800,
+                      color: purple,
+                      letterSpacing: -1,
                     ),
-                    decoration: BoxDecoration(
-                      color: enRuta
-                          ? Colors.green.shade50
-                          : purpleLight.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          enRuta
-                              ? Icons.directions_bus
-                              : Icons.check_circle_outline,
-                          size: 20,
-                          color: enRuta
-                              ? Colors.green.shade700
-                              : purple,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          enRuta ? 'En ruta' : 'Disponible',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                  ),
+                  const SizedBox(height: 12),
+                  BlocBuilder<RouteBloc, RouteState>(
+                    buildWhen: (prev, curr) =>
+                        prev.currentRoute != curr.currentRoute,
+                    builder: (context, state) {
+                      final enRuta = state.currentRoute != null;
+                      return Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
                             color: enRuta
-                                ? Colors.green.shade700
-                                : purple,
+                                ? Colors.green.shade50
+                                : purpleLight.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                enRuta
+                                    ? Icons.directions_bus
+                                    : Icons.check_circle_outline,
+                                size: 20,
+                                color: enRuta
+                                    ? Colors.green.shade700
+                                    : purple,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                enRuta ? 'En ruta' : 'Disponible',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: enRuta
+                                      ? Colors.green.shade700
+                                      : purple,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  _buildActionCard(theme, purple),
+                  const SizedBox(height: 32),
+                  const RouteTable(),
+                ],
               ),
-              const SizedBox(height: 40),
-              AmountSelector(
-                onAmountSelected: (amount) {
-                  setState(() {
-                    _selectedAmount = amount;
-                  });
-                },
-              ),
-              const SizedBox(height: 40),
-              _buildActionButtons(purple),
-              const SizedBox(height: 40),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: const RouteTable(),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildActionCard(ThemeData theme, Color purple) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: purple.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Monto',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          AmountSelector(
+            onAmountSelected: (amount) {
+              setState(() {
+                _selectedAmount = amount;
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildActionButtons(purple),
+          const SizedBox(height: 8),
+          _buildActionHint(theme, purple),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionHint(ThemeData theme, Color purple) {
+    return BlocBuilder<RouteBloc, RouteState>(
+      buildWhen: (prev, curr) =>
+          prev.currentRoute != curr.currentRoute ||
+          prev.placa != curr.placa ||
+          prev.isLoading != curr.isLoading,
+      builder: (context, state) {
+        final enRuta = state.currentRoute != null;
+        final calculating = state.isLoading;
+        if (enRuta) {
+          return Center(
+            child: Text(
+              'Finalizá la ruta para cargarla a la nube',
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          );
+        }
+        if (calculating) return const SizedBox.shrink();
+
+        final placaVacia = state.placa.trim().isEmpty;
+        final montoVacio = _selectedAmount == null;
+        late final String hint;
+        if (placaVacia) {
+          hint = 'Ingresá tu placa para iniciar';
+        } else if (montoVacio) {
+          hint = 'Elegí un monto para iniciar';
+        } else {
+          hint = 'Listo para iniciar la ruta';
+        }
+        return Center(
+          child: Text(
+            hint,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        );
+      },
     );
   }
 

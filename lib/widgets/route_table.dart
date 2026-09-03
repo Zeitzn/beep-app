@@ -17,7 +17,7 @@ class RouteTable extends StatelessWidget {
         final hasRoutes = state.routes.isNotEmpty;
 
         if (!hasCurrentRoute && !hasRoutes) {
-          return const SizedBox.shrink();
+          return _buildEmptyState(context, purple);
         }
 
         return Column(
@@ -47,15 +47,59 @@ class RouteTable extends StatelessWidget {
                 children: [
                   _buildHeader(purple),
                   if (hasCurrentRoute)
-                    _buildRow(1, state.currentRoute!, purple, isActive: true),
+                    _buildRow(context, 1, state.currentRoute!, purple,
+                        isActive: true),
                   for (final (i, route) in state.routes.reversed.indexed)
-                    _buildRow((hasCurrentRoute ? i + 2 : i + 1), route, purple),
+                    _buildRow(context, (hasCurrentRoute ? i + 2 : i + 1), route,
+                        purple),
                 ],
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, Color purple) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      decoration: BoxDecoration(
+        color: purple.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: purple.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.route_outlined,
+            size: 40,
+            color: purple.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Aún no hay viajes',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: purple.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Iniciá tu primera ruta y aparecerá aquí',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -75,13 +119,6 @@ class RouteTable extends StatelessWidget {
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
-          // Expanded(
-          //   flex: 2,
-          //   child: Text(
-          //     'Monto',
-          //     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-          //   ),
-          // ),
           Expanded(
             flex: 3,
             child: Text(
@@ -118,6 +155,7 @@ class RouteTable extends StatelessWidget {
   }
 
   Widget _buildRow(
+    BuildContext context,
     int index,
     RouteModel route,
     Color purple, {
@@ -135,6 +173,7 @@ class RouteTable extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 1,
@@ -147,35 +186,22 @@ class RouteTable extends StatelessWidget {
               ),
             ),
           ),
-          // Expanded(
-          //   flex: 2,
-          //   child: Text(
-          //     route.amount.toStringAsFixed(0),
-          //     style: TextStyle(
-          //       fontSize: 13,
-          //       fontWeight: FontWeight.w600,
-          //       color: isActive ? Colors.green.shade700 : null,
-          //     ),
-          //   ),
-          // ),
           Expanded(
             flex: 3,
-            child: Text(
-              '${route.startLat.toStringAsFixed(4)}, ${route.startLng.toStringAsFixed(4)}',
-              style: const TextStyle(fontSize: 11),
-            ),
+            child: _buildCoords(context, route.startLat, route.startLng),
           ),
           Expanded(
             flex: 3,
-            child: Text(
-              isActive
-                  ? 'En curso...'
-                  : '${route.endLat.toStringAsFixed(4)}, ${route.endLng.toStringAsFixed(4)}',
-              style: TextStyle(
-                fontSize: 11,
-                color: isActive ? Colors.orange.shade700 : null,
-              ),
-            ),
+            child: isActive
+                ? const Text(
+                    'En curso...',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                : _buildCoords(context, route.endLat, route.endLng),
           ),
           Expanded(
             flex: 2,
@@ -197,6 +223,28 @@ class RouteTable extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCoords(BuildContext context, double lat, double lng) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lat.toStringAsFixed(3),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          lng.toStringAsFixed(3),
+          style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
     );
   }
 
