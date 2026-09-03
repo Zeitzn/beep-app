@@ -9,6 +9,7 @@ import 'services/local_route_data_source.dart';
 import 'services/location_service.dart';
 import 'services/route_data_source.dart';
 import 'services/storage_service.dart';
+import 'services/trip_api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,7 @@ void main() async {
         create: (_) => RouteBloc(
           storage: storageService,
           location: locationService,
+          tripApi: TripApiService(),
         )..add(const RoutesLoaded()),
         child: MaterialApp(
           title: 'Beep',

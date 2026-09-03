@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../models/route_model.dart';
+
 sealed class RouteEvent extends Equatable {
   const RouteEvent();
 
@@ -39,4 +41,13 @@ final class PlacaChanged extends RouteEvent {
 
   @override
   List<Object?> get props => [placa];
+}
+
+final class TripsSynced extends RouteEvent {
+  final List<RouteModel> routes;
+
+  const TripsSynced(this.routes);
+
+  @override
+  List<Object?> get props => [routes];
 }

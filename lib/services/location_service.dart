@@ -20,7 +20,6 @@ class LocationService {
         ),
       );
     } on TimeoutException {
-      print('getLastKnownPosition');
       final last = await Geolocator.getLastKnownPosition();
       if (last != null) return last;
       rethrow;

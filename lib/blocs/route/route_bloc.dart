@@ -6,18 +6,25 @@ import 'package:uuid/uuid.dart';
 import '../../models/route_model.dart';
 import '../../services/location_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/trip_api_service.dart';
 import 'route_event.dart';
 import 'route_state.dart';
 
 class RouteBloc extends Bloc<RouteEvent, RouteState> {
+  static const _syncInterval = Duration(minutes: 30);
+
   final StorageService storage;
   final LocationService location;
   final _uuid = const Uuid();
+  final TripApiService? tripApi;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
+  Timer? _syncTimer;
+  bool _syncing = false;
 
   RouteBloc({
     required this.storage,
     required this.location,
+    this.tripApi,
   }) : super(const RouteState()) {
     on<RoutesLoaded>(_onRoutesLoaded);
     on<RouteStarted>(_onRouteStarted);
@@ -25,15 +32,62 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     on<GpsStatusChecked>(_onGpsStatusChecked);
     on<GpsSettingsOpened>(_onGpsSettingsOpened);
     on<PlacaChanged>(_onPlacaChanged);
+    on<TripsSynced>(_onTripsSynced);
 
     _serviceStatusSub = location.serviceStatusStream().listen((_) {
       add(const GpsStatusChecked());
     });
+
+    if (tripApi != null) {
+      _scheduleSync();
+    }
+  }
+
+  void _scheduleSync() {
+    _syncPending();
+    _syncTimer = Timer.periodic(_syncInterval, (_) => _syncPending());
+  }
+
+  Future<void> _syncPending() async {
+    final api = tripApi;
+    if (api == null || _syncing) return;
+    _syncing = true;
+    try {
+      final routes = await storage.loadRoutes();
+      final owner = await storage.loadPlaca();
+      if (owner.trim().isEmpty) return;
+
+      final pending = routes
+          .where((r) => !r.uploaded && r.endDateTime != null)
+          .toList();
+      if (pending.isEmpty) return;
+
+      await api.sendTrips(owner: owner, routes: pending);
+
+      final pendingIds = pending.map((r) => r.uuid).toSet();
+      final updated = routes
+          .map((r) =>
+              pendingIds.contains(r.uuid) ? r.copyWith(uploaded: true) : r)
+          .toList();
+      await storage.saveRoutes(updated);
+      add(TripsSynced(updated));
+    } catch (_) {
+    } finally {
+      _syncing = false;
+    }
+  }
+
+  Future<void> _onTripsSynced(
+    TripsSynced event,
+    Emitter<RouteState> emit,
+  ) async {
+    emit(state.copyWith(routes: event.routes));
   }
 
   @override
   Future<void> close() {
     _serviceStatusSub?.cancel();
+    _syncTimer?.cancel();
     return super.close();
   }
 
