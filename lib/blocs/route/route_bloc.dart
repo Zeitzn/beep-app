@@ -67,6 +67,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     Emitter<RouteState> emit,
   ) async {
     try {
+      emit(state.copyWith(error: () => null));
       final gpsEnabled = await location.isGpsEnabled();
       if (!gpsEnabled) {
         emit(state.copyWith(
@@ -112,6 +113,12 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
           error: () => 'Error al guardar la ruta en proceso: $e',
         ));
       }
+    } on TimeoutException {
+      emit(state.copyWith(
+        isLoading: false,
+        error: () =>
+            'No se pudo obtener la ubicación. Verifica la señal GPS e intenta de nuevo.',
+      ));
     } catch (e) {
       emit(state.copyWith(
         isLoading: false,

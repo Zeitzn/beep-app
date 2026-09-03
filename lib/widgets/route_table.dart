@@ -130,7 +130,7 @@ class RouteTable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              '\$${route.amount.toStringAsFixed(0)}',
+              route.amount.toStringAsFixed(0),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
