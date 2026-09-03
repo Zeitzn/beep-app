@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 class AmountSelector extends StatefulWidget {
   final List<int> presetValues;
-  final ValueChanged<double> onAmountSelected;
+  final ValueChanged<double?> onAmountSelected;
 
   const AmountSelector({
     super.key,
@@ -61,10 +61,7 @@ class _AmountSelectorState extends State<AmountSelector> {
   }
 
   void _emitAmount() {
-    final amount = _selectedAmount;
-    if (amount != null) {
-      widget.onAmountSelected(amount);
-    }
+    widget.onAmountSelected(_selectedAmount);
   }
 
   @override

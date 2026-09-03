@@ -6,7 +6,7 @@ import 'package:beep/widgets/amount_selector.dart';
 void main() {
   testWidgets('preset button remains selected after typing in the input',
       (WidgetTester tester) async {
-    final selectedAmounts = <double>[];
+    final selectedAmounts = <double?>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -32,7 +32,7 @@ void main() {
 
   testWidgets('typing in the input deselects the preset button',
       (WidgetTester tester) async {
-    final selectedAmounts = <double>[];
+    final selectedAmounts = <double?>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -51,5 +51,30 @@ void main() {
     await tester.enterText(find.byType(TextField), '8');
     await tester.pump();
     expect(selectedAmounts.last, 8.0);
+  });
+
+  testWidgets('clearing the input emits null (no amount selected)',
+      (WidgetTester tester) async {
+    final selectedAmounts = <double?>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AmountSelector(
+            onAmountSelected: selectedAmounts.add,
+          ),
+        ),
+      ),
+    );
+
+    // Type a value into the free input (this deselects any preset).
+    await tester.enterText(find.byType(TextField), '8');
+    await tester.pump();
+    expect(selectedAmounts.last, 8.0);
+
+    // Clear the input: no preset + empty input -> null must be emitted so the
+    // parent can disable the start button.
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    expect(selectedAmounts.last, isNull);
   });
 }
