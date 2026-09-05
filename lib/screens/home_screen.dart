@@ -197,9 +197,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final montoVacio = _selectedAmount == null;
         late final String hint;
         if (placaVacia) {
-          hint = 'Ingresá tu placa para iniciar';
+          hint = 'Ingresa tu placa para iniciar';
         } else if (montoVacio) {
-          hint = 'Elegí un monto para iniciar';
+          hint = 'Elige un monto para iniciar';
         } else {
           hint = 'Listo para iniciar la ruta';
         }

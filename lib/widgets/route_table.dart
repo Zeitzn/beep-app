@@ -88,7 +88,7 @@ class RouteTable extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Iniciá tu primera ruta y aparecerá aquí',
+            'Inicia tu primera ruta y aparecerá aquí',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
