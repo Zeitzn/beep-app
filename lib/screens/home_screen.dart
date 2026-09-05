@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (enRuta) {
           return Center(
             child: Text(
-              'Finalizá la ruta para cargarla a la nube',
+              'Finaliza la ruta al completar el viaje',
               style: TextStyle(
                 fontSize: 12,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),

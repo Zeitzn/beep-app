@@ -58,14 +58,15 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
     final api = tripApi;
     if (api == null || _syncing) return;
     _syncing = true;
+    final pending = <RouteModel>[];
     try {
       final routes = await storage.loadRoutes();
       final owner = await storage.loadPlaca();
       if (owner.trim().isEmpty) return;
 
-      final pending = routes
-          .where((r) => !r.uploaded && r.endDateTime != null)
-          .toList();
+      pending.addAll(
+        routes.where((r) => !r.uploaded && r.endDateTime != null),
+      );
       if (pending.isEmpty) return;
 
       await api.sendTrips(owner: owner, routes: pending);
@@ -76,7 +77,10 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
           .toList();
       await storage.saveRoutes(remaining);
       add(TripsSynced(remaining));
-    } catch (_) {
+    } catch (e) {
+      emit(state.copyWith(
+        error: () => 'No se pudieron subir ${pending.length} ruta(s): $e',
+      ));
     } finally {
       _syncing = false;
     }
