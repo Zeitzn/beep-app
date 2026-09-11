@@ -48,8 +48,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Patrón #1'), findsOneWidget);
-    expect(find.text('Latitud'), findsOneWidget);
-    expect(find.text('71.0%'), findsOneWidget);
+    expect(find.text('Hora aproximada'), findsOneWidget);
+    expect(find.text('83.0%'), findsOneWidget);
     expect(find.text('Lunes'), findsOneWidget);
   });
 

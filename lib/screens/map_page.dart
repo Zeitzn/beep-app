@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,6 +8,29 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/trip_pattern.dart';
 import '../services/trip_api_service.dart';
+
+Future<Position> _resolveUserPosition() async {
+  final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    return Future.error('El servicio de ubicación está desactivado.');
+  }
+
+  var permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      return Future.error('Permiso de ubicación denegado.');
+    }
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    return Future.error(
+      'El permiso de ubicación fue denegado permanentemente.',
+    );
+  }
+
+  return Geolocator.getCurrentPosition();
+}
 
 class MapPage extends StatefulWidget {
   final String owner;
@@ -47,21 +72,80 @@ class _MapPageState extends State<MapPage> {
   final _mapController = MapController();
   late final Future<List<TripPattern>> _future;
   bool _fitted = false;
+  bool _follow = false;
+  double _followZoom = 14;
+  LatLng? _userPosition;
+  double? _userAccuracy;
+  StreamSubscription<Position>? _positionSub;
 
   @override
   void initState() {
     super.initState();
     _future = widget.api.fetchPatterns(widget.owner);
+    _startTracking();
   }
 
   @override
   void dispose() {
+    _positionSub?.cancel();
     _mapController.dispose();
     super.dispose();
   }
 
+  Future<void> _startTracking() async {
+    try {
+      final position = await _resolveUserPosition();
+      if (!mounted) return;
+      setState(() {
+        _userPosition = LatLng(position.latitude, position.longitude);
+        _userAccuracy = position.accuracy;
+      });
+      _centerOnUser();
+      _positionSub = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 0,
+        ),
+      ).listen((position) {
+        if (!mounted) return;
+        setState(() {
+          _userPosition = LatLng(position.latitude, position.longitude);
+          _userAccuracy = position.accuracy;
+        });
+        if (_follow) _mapController.move(_userPosition!, _followZoom);
+      });
+    } catch (_) {
+      // La ubicación no está disponible; el mapa funciona sin rastreo.
+    }
+  }
+
+  void _centerOnUser() {
+    final position = _userPosition;
+    if (position == null) return;
+    double zoom = 16;
+    try {
+      zoom = _mapController.camera.zoom;
+    } catch (_) {
+      // La cámara aún no está disponible; usar el zoom por defecto.
+    }
+    _followZoom = zoom;
+    _mapController.move(position, zoom);
+  }
+
+  void _toggleFollow() {
+    if (_userPosition == null) return;
+    setState(() => _follow = !_follow);
+    if (_follow) _centerOnUser();
+  }
+
+  void _stopFollowingOnUserPan() {
+    if (!_follow) return;
+    setState(() => _follow = false);
+  }
+
   void _fitToPatterns(List<TripPattern> patterns) {
     if (patterns.isEmpty || _fitted) return;
+    if (_userPosition != null) return;
     _fitted = true;
     final bounds = LatLngBounds.fromPoints(
       patterns
@@ -128,6 +212,48 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  static const _userBlue = Color(0xFF1E88E5);
+
+  Marker _buildUserMarker() {
+    return Marker(
+      key: const ValueKey('user-marker'),
+      point: _userPosition!,
+      width: 18,
+      height: 18,
+      alignment: Alignment.center,
+      child: Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _userBlue,
+          border: Border.all(color: Colors.white, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  CircleMarker _buildUserAccuracyCircle(
+    LatLng point,
+    double accuracyMeters,
+  ) {
+    return CircleMarker(
+      point: point,
+      radius: accuracyMeters,
+      useRadiusInMeter: true,
+      color: _userBlue.withValues(alpha: 0.15),
+      borderColor: _userBlue.withValues(alpha: 0.35),
+      borderStrokeWidth: 1.5,
+    );
+  }
+
   CircleMarker _buildCircle(TripPattern pattern, int index) {
     final color = _colors[index % _colors.length];
     return CircleMarker(
@@ -158,10 +284,13 @@ class _MapPageState extends State<MapPage> {
           final markers = <Marker>[
             for (var i = 0; i < patterns.length; i++)
               _buildMarker(patterns[i], i),
+            if (_userPosition != null) _buildUserMarker(),
           ];
           final circles = <CircleMarker>[
             for (var i = 0; i < patterns.length; i++)
               _buildCircle(patterns[i], i),
+            if (_userPosition != null && _userAccuracy != null)
+              _buildUserAccuracyCircle(_userPosition!, _userAccuracy!),
           ];
 
           return Stack(
@@ -172,6 +301,13 @@ class _MapPageState extends State<MapPage> {
                   initialCenter: _initialCenter,
                   initialZoom: _initialZoom,
                   maxZoom: _maxZoom,
+                  onMapEvent: (event) {
+                    if (event is MapEventMoveStart &&
+                        (event.source == MapEventSource.dragStart ||
+                            event.source == MapEventSource.onDrag)) {
+                      _stopFollowingOnUserPan();
+                    }
+                  },
                 ),
                 children: [
                   TileLayer(
@@ -183,6 +319,24 @@ class _MapPageState extends State<MapPage> {
                   CircleLayer(circles: circles),
                   MarkerLayer(markers: markers),
                 ],
+              ),
+              Positioned(
+                right: 16,
+                bottom: 24,
+                child: FloatingActionButton(
+                  key: const ValueKey('follow-user-button'),
+                  onPressed: _userPosition == null ? null : _toggleFollow,
+                  backgroundColor:
+                      _follow ? const Color(0xFF1E88E5) : Colors.white,
+                  foregroundColor: _follow ? Colors.white : Colors.black87,
+                  mini: true,
+                  tooltip: 'Centrar en mi ubicación',
+                  child: Icon(
+                    _follow
+                        ? Icons.my_location
+                        : Icons.my_location_outlined,
+                  ),
+                ),
               ),
               if (snapshot.connectionState == ConnectionState.waiting)
                 _buildFloatingBanner('Cargando patrones...'),
@@ -298,33 +452,10 @@ class _PatternDialogState extends State<_PatternDialog> {
         ('Día', widget.pattern.dayName),
       ];
 
-  Future<Position> _determinePosition() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('El servicio de ubicación está desactivado.');
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Permiso de ubicación denegado.');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-        'El permiso de ubicación fue denegado permanentemente.',
-      );
-    }
-
-    return Geolocator.getCurrentPosition();
-  }
-
   Future<void> _openGoogleMaps() async {
     setState(() => _launching = true);
     try {
-      final position = await _determinePosition();
+      final position = await _resolveUserPosition();
       final uri = Uri.parse(
         'https://www.google.com/maps/dir/?api=1'
         '&origin=${position.latitude},${position.longitude}'
