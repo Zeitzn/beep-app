@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/trip_pattern.dart';
 import '../services/trip_api_service.dart';
@@ -76,9 +78,11 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _showPatternDialog(TripPattern pattern, int index) {
+    final color = _colors[index % _colors.length];
     showDialog<void>(
       context: context,
-      builder: (_) => _PatternDialog(pattern: pattern, index: index),
+      builder: (_) =>
+          _PatternDialog(pattern: pattern, index: index, color: color),
     );
   }
 
@@ -260,27 +264,93 @@ class _MapPageState extends State<MapPage> {
   }
 }
 
-class _PatternDialog extends StatelessWidget {
+class _PatternDialog extends StatefulWidget {
   final TripPattern pattern;
   final int index;
+  final Color color;
 
-  const _PatternDialog({required this.pattern, required this.index});
+  const _PatternDialog({
+    required this.pattern,
+    required this.index,
+    required this.color,
+  });
+
+  @override
+  State<_PatternDialog> createState() => _PatternDialogState();
+}
+
+class _PatternDialogState extends State<_PatternDialog> {
+  bool _launching = false;
 
   List<(String, String)> get _rows => [
-        ('Latitud', '${pattern.latitude}'),
-        ('Longitud', '${pattern.longitude}'),
-        ('Radio', '${pattern.radiusMeters} m'),
-        ('Hora', pattern.startTime),
-        ('Ventana', '${pattern.timeWindowMinutes} min'),
-        ('Inicio de Ventana', pattern.timeWindowStart),
-        ('Fin de Ventana', pattern.timeWindowEnd),
-        ('Viajes', '${pattern.tripCount}'),
-        ('Días observados', '${pattern.daysObserved}'),
-        ('Recurrencia', pattern.recurrencePercent),
-        ('Pasajeros esperados', '${pattern.expectedPassengers}'),
-        ('Confianza', pattern.confidencePercent),
-        ('Día', pattern.dayName),
+        // ('Latitud', '${widget.pattern.latitude}'),
+        // ('Longitud', '${widget.pattern.longitude}'),
+        // ('Radio', '${widget.pattern.radiusMeters} m'),
+        ('Hora aproximada', widget.pattern.startTime),
+        // ('Ventana', '${widget.pattern.timeWindowMinutes} min'),
+        // ('Inicio de Ventana', widget.pattern.timeWindowStart),
+        // ('Fin de Ventana', widget.pattern.timeWindowEnd),
+        // ('Viajes', '${widget.pattern.tripCount}'),
+        // ('Días observados', '${widget.pattern.daysObserved}'),
+        // ('Recurrencia', widget.pattern.recurrencePercent),
+        // ('Pasajeros esperados', '${widget.pattern.expectedPassengers}'),
+        ('Confianza', widget.pattern.confidencePercent),
+        ('Día', widget.pattern.dayName),
       ];
+
+  Future<Position> _determinePosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('El servicio de ubicación está desactivado.');
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Permiso de ubicación denegado.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+        'El permiso de ubicación fue denegado permanentemente.',
+      );
+    }
+
+    return Geolocator.getCurrentPosition();
+  }
+
+  Future<void> _openGoogleMaps() async {
+    setState(() => _launching = true);
+    try {
+      final position = await _determinePosition();
+      final uri = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1'
+        '&origin=${position.latitude},${position.longitude}'
+        '&destination=${widget.pattern.latitude},${widget.pattern.longitude}'
+        '&travelmode=driving',
+      );
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        _showError('No se pudo abrir Google Maps.');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _launching = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +368,7 @@ class _PatternDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Patrón #${index + 1}',
+                'Patrón #${widget.index + 1}',
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -331,6 +401,36 @@ class _PatternDialog extends StatelessWidget {
                     ],
                   ),
                 ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 44,
+                child: FilledButton.icon(
+                  onPressed: _launching ? null : _openGoogleMaps,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: widget.color,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: _launching
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.navigation),
+                  label: Text(
+                    _launching ? 'Abriendo...' : 'Ir',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
