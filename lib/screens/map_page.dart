@@ -1,0 +1,340 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../models/trip_pattern.dart';
+import '../services/trip_api_service.dart';
+
+class MapPage extends StatefulWidget {
+  final String owner;
+  final TripApiService api;
+
+  MapPage({
+    super.key,
+    required this.owner,
+    TripApiService? api,
+  }) : api = api ?? TripApiService();
+
+  @override
+  State<MapPage> createState() => _MapPageState();
+}
+
+class _MapPageState extends State<MapPage> {
+  static final _initialCenter = LatLng(-13.16, -74.23);
+  static const _initialZoom = 14.0;
+  static const _maxZoom = 19.0;
+
+  static const _colors = [
+    Color(0xFFE53935),
+    Color(0xFF1E88E5),
+    Color(0xFF43A047),
+    Color(0xFFFB8C00),
+    Color(0xFF8E24AA),
+    Color(0xFF00ACC1),
+    Color(0xFF6D4C41),
+    Color(0xFFD81B60),
+    Color(0xFF3949AB),
+    Color(0xFF00897B),
+    Color(0xFFF4511E),
+    Color(0xFF7CB342),
+    Color(0xFF5E35B1),
+    Color(0xFF039BE5),
+    Color(0xFFC0CA33),
+  ];
+
+  final _mapController = MapController();
+  late final Future<List<TripPattern>> _future;
+  bool _fitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.api.fetchPatterns(widget.owner);
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  void _fitToPatterns(List<TripPattern> patterns) {
+    if (patterns.isEmpty || _fitted) return;
+    _fitted = true;
+    final bounds = LatLngBounds.fromPoints(
+      patterns
+          .map((p) => LatLng(p.latitude, p.longitude))
+          .toList(),
+    );
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.all(50),
+        maxZoom: 16,
+      ),
+    );
+  }
+
+  void _showPatternDialog(TripPattern pattern, int index) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _PatternDialog(pattern: pattern, index: index),
+    );
+  }
+
+  Marker _buildMarker(TripPattern pattern, int index) {
+    final color = _colors[index % _colors.length];
+    return Marker(
+      key: ValueKey('pattern-marker-$index'),
+      point: LatLng(pattern.latitude, pattern.longitude),
+      width: 28,
+      height: 28,
+      alignment: Alignment.center,
+      child: GestureDetector(
+        key: ValueKey('pattern-tap-$index'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _showPatternDialog(pattern, index),
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black45,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  CircleMarker _buildCircle(TripPattern pattern, int index) {
+    final color = _colors[index % _colors.length];
+    return CircleMarker(
+      point: LatLng(pattern.latitude, pattern.longitude),
+      radius: pattern.radiusMeters,
+      useRadiusInMeter: true,
+      color: color.withValues(alpha: 0.12),
+      borderColor: color,
+      borderStrokeWidth: 2,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F5FC),
+      body: FutureBuilder<List<TripPattern>>(
+        future: _future,
+        builder: (context, snapshot) {
+          final patterns = snapshot.data ?? const <TripPattern>[];
+
+          if (snapshot.hasData) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _fitToPatterns(patterns);
+            });
+          }
+
+          final markers = <Marker>[
+            for (var i = 0; i < patterns.length; i++)
+              _buildMarker(patterns[i], i),
+          ];
+          final circles = <CircleMarker>[
+            for (var i = 0; i < patterns.length; i++)
+              _buildCircle(patterns[i], i),
+          ];
+
+          return Stack(
+            children: [
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _initialCenter,
+                  initialZoom: _initialZoom,
+                  maxZoom: _maxZoom,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    maxZoom: _maxZoom,
+                    userAgentPackageName: 'com.example.beep',
+                  ),
+                  CircleLayer(circles: circles),
+                  MarkerLayer(markers: markers),
+                ],
+              ),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                _buildFloatingBanner('Cargando patrones...'),
+              if (snapshot.hasError)
+                _buildErrorBanner(
+                  'No se pudieron cargar los patrones: '
+                  '${snapshot.error}',
+                ),
+              if (snapshot.connectionState == ConnectionState.done &&
+                  !snapshot.hasError &&
+                  patterns.isEmpty)
+                const Center(
+                  child: Text(
+                    'No se encontraron patrones',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFloatingBanner(String message) {
+    return Positioned(
+      top: 20,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(message),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Positioned(
+      top: 20,
+      left: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD32F2F),
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+class _PatternDialog extends StatelessWidget {
+  final TripPattern pattern;
+  final int index;
+
+  const _PatternDialog({required this.pattern, required this.index});
+
+  List<(String, String)> get _rows => [
+        ('Latitud', '${pattern.latitude}'),
+        ('Longitud', '${pattern.longitude}'),
+        ('Radio', '${pattern.radiusMeters} m'),
+        ('Hora', pattern.startTime),
+        ('Ventana', '${pattern.timeWindowMinutes} min'),
+        ('Inicio de Ventana', pattern.timeWindowStart),
+        ('Fin de Ventana', pattern.timeWindowEnd),
+        ('Viajes', '${pattern.tripCount}'),
+        ('Días observados', '${pattern.daysObserved}'),
+        ('Recurrencia', pattern.recurrencePercent),
+        ('Pasajeros esperados', '${pattern.expectedPassengers}'),
+        ('Confianza', pattern.confidencePercent),
+        ('Día', pattern.dayName),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: 280,
+          maxWidth: 360,
+          maxHeight: 420,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Patrón #${index + 1}',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final (label, value) in _rows)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade200,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 150,
+                        child: Text(
+                          label,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(value),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

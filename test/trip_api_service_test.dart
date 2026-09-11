@@ -7,6 +7,22 @@ import 'package:http/testing.dart';
 import 'package:beep/models/route_model.dart';
 import 'package:beep/services/trip_api_service.dart';
 
+Map<String, dynamic> _patternJson() => {
+      'latitude': -13.1556,
+      'longitude': -74.2174,
+      'radiusMeters': 82.4,
+      'startTime': '07:30',
+      'timeWindowMinutes': 45,
+      'timeWindowStart': '07:07',
+      'timeWindowEnd': '07:52',
+      'tripCount': 12,
+      'daysObserved': 5,
+      'recurrenceRate': 0.71,
+      'expectedPassengers': 2.4,
+      'confidenceScore': 0.83,
+      'dayOfWeek': 1,
+    };
+
 RouteModel _pendingRoute() => RouteModel(
       uuid: 'route-1',
       startLat: -34.6037,
@@ -87,6 +103,45 @@ void main() {
     final service = TripApiService(client: client);
     expect(
       () => service.sendTrips(owner: 'AB001', routes: [_pendingRoute()]),
+      throwsA(isA<http.ClientException>()),
+    );
+  });
+
+  test('fetchPatterns GETs the owner patterns endpoint and parses the list',
+      () async {
+    late http.Request captured;
+    final client = MockClient((request) async {
+      captured = request;
+      return http.Response(jsonEncode([_patternJson()]), 200);
+    });
+
+    final service = TripApiService(client: client);
+    final patterns = await service.fetchPatterns('AB001');
+
+    expect(captured.method, 'GET');
+    expect(captured.url.path, '/trips/owner/AB001/patterns');
+    expect(patterns, hasLength(1));
+    expect(patterns.single.latitude, -13.1556);
+    expect(patterns.single.radiusMeters, 82.4);
+    expect(patterns.single.recurrenceRate, 0.71);
+    expect(patterns.single.dayOfWeek, 1);
+  });
+
+  test('fetchPatterns returns an empty list for an empty array', () async {
+    final client = MockClient((request) async => http.Response('[]', 200));
+
+    final service = TripApiService(client: client);
+    final patterns = await service.fetchPatterns('AB001');
+
+    expect(patterns, isEmpty);
+  });
+
+  test('fetchPatterns throws on non-2xx status', () async {
+    final client = MockClient((request) async => http.Response('error', 500));
+
+    final service = TripApiService(client: client);
+    expect(
+      () => service.fetchPatterns('AB001'),
       throwsA(isA<http.ClientException>()),
     );
   });

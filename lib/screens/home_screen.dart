@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/route/route_bloc.dart';
 import '../blocs/route/route_event.dart';
 import '../blocs/route/route_state.dart';
+import 'map_page.dart';
 import 'placa_screen.dart';
 import '../widgets/amount_selector.dart';
 import '../widgets/gps_warning_banner.dart';
@@ -360,23 +361,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
             ),
-            // const SizedBox(height: 16),
-            // Center(
-            //   child: Builder(
-            //     builder: (innerContext) {
-            //       final location = RepositoryProvider.of<LocationService>(
-            //         innerContext,
-            //       );
-            //       final dataSource =
-            //           RepositoryProvider.of<RouteDataSource>(innerContext);
-            //       return MapButton(
-            //         enabled: state.routes.isNotEmpty,
-            //         location: location,
-            //         dataSource: dataSource,
-            //       );
-            //     },
-            //   ),
-            // ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MapPage(owner: state.placa),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: purple.withValues(alpha: 0.08),
+                  foregroundColor: purple,
+                  side: BorderSide(color: purple.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.map, size: 20),
+                label: const Text(
+                  'Ver mapa',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         );
       },

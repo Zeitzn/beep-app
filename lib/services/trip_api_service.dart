@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import '../models/route_model.dart';
+import '../models/trip_pattern.dart';
 
 class TripApiService {
   static const _url = 'https://beep.todoprogramacionapi.xyz/trips';
@@ -41,6 +42,23 @@ class TripApiService {
         Uri.parse(_url),
       );
     }
+  }
+
+  Future<List<TripPattern>> fetchPatterns(String owner) async {
+    final uri = Uri.parse('$_url/owner/$owner/patterns');
+    final response = await _client.get(uri);
+
+    if (response.statusCode >= 400) {
+      throw http.ClientException(
+        'Trip API error: ${response.statusCode}',
+        uri,
+      );
+    }
+
+    final list = jsonDecode(response.body) as List;
+    return list
+        .map((e) => TripPattern.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   static Map<String, dynamic> _toElement(RouteModel route) {
