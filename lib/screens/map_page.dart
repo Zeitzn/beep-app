@@ -77,7 +77,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   late final Future<List<TripPattern>> _future;
   bool _fitted = false;
   bool _follow = false;
-  double _followZoom = 14;
   LatLng? _userPosition;
   double? _userAccuracy;
   StreamSubscription<Position>? _positionSub;
@@ -119,8 +118,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
           _userAccuracy = position.accuracy;
         });
         if (_follow) {
-          _animatedController.mapController
-              .move(_userPosition!, _followZoom);
+          _animatedController.mapController.move(
+            _userPosition!,
+            _animatedController.mapController.camera.zoom,
+          );
         }
       });
     } catch (_) {
@@ -137,7 +138,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     } catch (_) {
       // La cámara aún no está disponible; usar el zoom por defecto.
     }
-    _followZoom = zoom;
     _animatedController.animateTo(dest: position, zoom: zoom);
   }
 
