@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -48,7 +49,7 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   static final _initialCenter = LatLng(-13.16, -74.23);
   static const _initialZoom = 14.0;
   static const _maxZoom = 19.0;
@@ -71,7 +72,8 @@ class _MapPageState extends State<MapPage> {
     Color(0xFFC0CA33),
   ];
 
-  final _mapController = MapController();
+  late final AnimatedMapController _animatedController =
+      AnimatedMapController(vsync: this);
   late final Future<List<TripPattern>> _future;
   bool _fitted = false;
   bool _follow = false;
@@ -92,7 +94,7 @@ class _MapPageState extends State<MapPage> {
   @override
   void dispose() {
     _positionSub?.cancel();
-    _mapController.dispose();
+    _animatedController.dispose();
     super.dispose();
   }
 
@@ -116,7 +118,10 @@ class _MapPageState extends State<MapPage> {
           _userPosition = LatLng(position.latitude, position.longitude);
           _userAccuracy = position.accuracy;
         });
-        if (_follow) _mapController.move(_userPosition!, _followZoom);
+        if (_follow) {
+          _animatedController.mapController
+              .move(_userPosition!, _followZoom);
+        }
       });
     } catch (_) {
       // La ubicación no está disponible; el mapa funciona sin rastreo.
@@ -128,12 +133,12 @@ class _MapPageState extends State<MapPage> {
     if (position == null) return;
     double zoom = 16;
     try {
-      zoom = _mapController.camera.zoom;
+      zoom = _animatedController.mapController.camera.zoom;
     } catch (_) {
       // La cámara aún no está disponible; usar el zoom por defecto.
     }
     _followZoom = zoom;
-    _mapController.move(position, zoom);
+    _animatedController.animateTo(dest: position, zoom: zoom);
   }
 
   void _toggleFollow() {
@@ -143,9 +148,9 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _moveZoom(int delta) {
-    final camera = _mapController.camera;
+    final camera = _animatedController.mapController.camera;
     final zoom = (camera.zoom + delta).clamp(2.0, _maxZoom).toDouble();
-    _mapController.move(camera.center, zoom);
+    _animatedController.animateTo(zoom: zoom);
   }
 
   void _zoomIn() => _moveZoom(1);
@@ -172,7 +177,7 @@ class _MapPageState extends State<MapPage> {
           .map((p) => LatLng(p.latitude, p.longitude))
           .toList(),
     );
-    _mapController.fitCamera(
+    _animatedController.mapController.fitCamera(
       CameraFit.bounds(
         bounds: bounds,
         padding: const EdgeInsets.all(50),
@@ -322,7 +327,7 @@ class _MapPageState extends State<MapPage> {
           return Stack(
             children: [
               FlutterMap(
-                mapController: _mapController,
+                mapController: _animatedController.mapController,
                 options: MapOptions(
                   initialCenter: _initialCenter,
                   initialZoom: _initialZoom,
