@@ -8,7 +8,7 @@ import 'package:http/testing.dart';
 import 'package:beep/screens/map_page.dart';
 import 'package:beep/services/trip_api_service.dart';
 
-Map<String, dynamic> _patternJson() => {
+Map<String, dynamic> _patternJson({int dayOfWeek = 1}) => {
       'latitude': -13.1556,
       'longitude': -74.2174,
       'radiusMeters': 82.4,
@@ -21,11 +21,18 @@ Map<String, dynamic> _patternJson() => {
       'recurrenceRate': 0.71,
       'expectedPassengers': 2.4,
       'confidenceScore': 0.83,
-      'dayOfWeek': 1,
+      'dayOfWeek': dayOfWeek,
     };
 
-MapPage _buildPageWithClient(http.Client client) {
-  return MapPage(owner: 'AB001', api: TripApiService(client: client));
+MapPage _buildPageWithClient(
+  http.Client client, {
+  Set<int>? initialDays,
+}) {
+  return MapPage(
+    owner: 'AB001',
+    api: TripApiService(client: client),
+    initialDays: initialDays,
+  );
 }
 
 Widget _wrap(Widget child) => MaterialApp(home: child);
@@ -37,7 +44,7 @@ void main() {
       (request) async => http.Response(jsonEncode([_patternJson()]), 200),
     );
 
-    await tester.pumpWidget(_wrap(_buildPageWithClient(client)));
+    await tester.pumpWidget(_wrap(_buildPageWithClient(client, initialDays: {1})));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
@@ -80,5 +87,144 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('No se encontraron patrones'), findsOneWidget);
+  });
+
+  testWidgets('renders the day filter bar with the 7 day buttons',
+      (WidgetTester tester) async {
+    final client = MockClient(
+      (request) async => http.Response('[]', 200),
+    );
+
+    await tester.pumpWidget(_wrap(_buildPageWithClient(client)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Día'), findsOneWidget);
+    expect(find.text('L'), findsOneWidget);
+    expect(find.text('M'), findsNWidgets(2));
+    expect(find.text('J'), findsOneWidget);
+    expect(find.text('V'), findsOneWidget);
+    expect(find.text('S'), findsOneWidget);
+    expect(find.text('D'), findsOneWidget);
+    for (var day = 1; day <= 7; day++) {
+      expect(find.byKey(ValueKey('day-filter-$day')), findsOneWidget);
+    }
+  });
+
+  testWidgets('renders zoom controls above the follow button',
+      (WidgetTester tester) async {
+    final client = MockClient(
+      (request) async => http.Response('[]', 200),
+    );
+
+    await tester.pumpWidget(_wrap(_buildPageWithClient(client)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+      find.byKey(const ValueKey('zoom-in-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('zoom-out-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('follow-user-button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('zoom-in-button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('zoom-out-button')));
+    await tester.pump();
+  });
+
+  testWidgets('filters markers by selected days and restores all on clear',
+      (WidgetTester tester) async {
+    final client = MockClient(
+      (request) async => http.Response(
+        jsonEncode([
+          _patternJson(dayOfWeek: 1),
+          _patternJson(dayOfWeek: 3),
+          _patternJson(dayOfWeek: 5),
+        ]),
+        200,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _wrap(_buildPageWithClient(client, initialDays: {})),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.byKey(const ValueKey('pattern-marker-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('day-filter-3')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const ValueKey('pattern-marker-0')), findsNothing);
+    expect(find.byKey(const ValueKey('pattern-marker-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-2')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('day-filter-5')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const ValueKey('pattern-marker-0')), findsNothing);
+    expect(find.byKey(const ValueKey('pattern-marker-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('day-filter-3')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const ValueKey('pattern-marker-1')), findsNothing);
+    expect(find.byKey(const ValueKey('pattern-marker-2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('day-filter-5')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const ValueKey('pattern-marker-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-2')), findsOneWidget);
+  });
+
+  testWidgets('preselects the current day by default and toggles off',
+      (WidgetTester tester) async {
+    final today = DateTime.now().weekday;
+    final client = MockClient(
+      (request) async => http.Response(
+        jsonEncode(
+          [for (var day = 1; day <= 7; day++) _patternJson(dayOfWeek: day)],
+        ),
+        200,
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(_buildPageWithClient(client)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    for (var day = 1; day <= 7; day++) {
+      final visible = day == today;
+      expect(
+        find.byKey(ValueKey('pattern-marker-${day - 1}')),
+        visible ? findsOneWidget : findsNothing,
+        reason: 'day $day expected ${visible ? 'visible' : 'hidden'}',
+      );
+    }
+
+    await tester.tap(find.byKey(ValueKey('day-filter-$today')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const ValueKey('pattern-marker-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pattern-marker-6')), findsOneWidget);
   });
 }

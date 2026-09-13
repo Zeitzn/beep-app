@@ -35,11 +35,13 @@ Future<Position> _resolveUserPosition() async {
 class MapPage extends StatefulWidget {
   final String owner;
   final TripApiService api;
+  final Set<int>? initialDays;
 
   MapPage({
     super.key,
     required this.owner,
     TripApiService? api,
+    this.initialDays,
   }) : api = api ?? TripApiService();
 
   @override
@@ -77,10 +79,12 @@ class _MapPageState extends State<MapPage> {
   LatLng? _userPosition;
   double? _userAccuracy;
   StreamSubscription<Position>? _positionSub;
+  late final Set<int> _selectedDays;
 
   @override
   void initState() {
     super.initState();
+    _selectedDays = widget.initialDays ?? {DateTime.now().weekday};
     _future = widget.api.fetchPatterns(widget.owner);
     _startTracking();
   }
@@ -138,9 +142,25 @@ class _MapPageState extends State<MapPage> {
     if (_follow) _centerOnUser();
   }
 
+  void _moveZoom(int delta) {
+    final camera = _mapController.camera;
+    final zoom = (camera.zoom + delta).clamp(2.0, _maxZoom).toDouble();
+    _mapController.move(camera.center, zoom);
+  }
+
+  void _zoomIn() => _moveZoom(1);
+
+  void _zoomOut() => _moveZoom(-1);
+
   void _stopFollowingOnUserPan() {
     if (!_follow) return;
     setState(() => _follow = false);
+  }
+
+  void _toggleDay(int day) {
+    setState(() {
+      if (!_selectedDays.add(day)) _selectedDays.remove(day);
+    });
   }
 
   void _fitToPatterns(List<TripPattern> patterns) {
@@ -281,14 +301,20 @@ class _MapPageState extends State<MapPage> {
             });
           }
 
-          final markers = <Marker>[
+          final visiblePatterns = <({TripPattern pattern, int index})>[
             for (var i = 0; i < patterns.length; i++)
-              _buildMarker(patterns[i], i),
+              if (_selectedDays.isEmpty ||
+                  _selectedDays.contains(patterns[i].dayOfWeek))
+                (pattern: patterns[i], index: i),
+          ];
+          final markers = <Marker>[
+            for (final item in visiblePatterns)
+              _buildMarker(item.pattern, item.index),
             if (_userPosition != null) _buildUserMarker(),
           ];
           final circles = <CircleMarker>[
-            for (var i = 0; i < patterns.length; i++)
-              _buildCircle(patterns[i], i),
+            for (final item in visiblePatterns)
+              _buildCircle(item.pattern, item.index),
             if (_userPosition != null && _userAccuracy != null)
               _buildUserAccuracyCircle(_userPosition!, _userAccuracy!),
           ];
@@ -321,21 +347,60 @@ class _MapPageState extends State<MapPage> {
                 ],
               ),
               Positioned(
+                top: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _DayFilterBar(
+                    selectedDays: _selectedDays,
+                    onToggle: _toggleDay,
+                  ),
+                ),
+              ),
+              Positioned(
                 right: 16,
                 bottom: 24,
-                child: FloatingActionButton(
-                  key: const ValueKey('follow-user-button'),
-                  onPressed: _userPosition == null ? null : _toggleFollow,
-                  backgroundColor:
-                      _follow ? const Color(0xFF1E88E5) : Colors.white,
-                  foregroundColor: _follow ? Colors.white : Colors.black87,
-                  mini: true,
-                  tooltip: 'Centrar en mi ubicación',
-                  child: Icon(
-                    _follow
-                        ? Icons.my_location
-                        : Icons.my_location_outlined,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FloatingActionButton(
+                      key: const ValueKey('zoom-in-button'),
+                      heroTag: 'zoom-in',
+                      onPressed: _zoomIn,
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      mini: true,
+                      tooltip: 'Acercar',
+                      child: const Icon(Icons.add),
+                    ),
+                    const SizedBox(height: 8),
+                    FloatingActionButton(
+                      key: const ValueKey('zoom-out-button'),
+                      heroTag: 'zoom-out',
+                      onPressed: _zoomOut,
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      mini: true,
+                      tooltip: 'Alejar',
+                      child: const Icon(Icons.remove),
+                    ),
+                    const SizedBox(height: 8),
+                    FloatingActionButton(
+                      key: const ValueKey('follow-user-button'),
+                      heroTag: 'follow-user',
+                      onPressed: _userPosition == null ? null : _toggleFollow,
+                      backgroundColor:
+                          _follow ? const Color(0xFF1E88E5) : Colors.white,
+                      foregroundColor: _follow ? Colors.white : Colors.black87,
+                      mini: true,
+                      tooltip: 'Centrar en mi ubicación',
+                      child: Icon(
+                        _follow
+                            ? Icons.my_location
+                            : Icons.my_location_outlined,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (snapshot.connectionState == ConnectionState.waiting)
@@ -367,7 +432,7 @@ class _MapPageState extends State<MapPage> {
 
   Widget _buildFloatingBanner(String message) {
     return Positioned(
-      top: 20,
+      top: 88,
       left: 0,
       right: 0,
       child: Center(
@@ -392,7 +457,7 @@ class _MapPageState extends State<MapPage> {
 
   Widget _buildErrorBanner(String message) {
     return Positioned(
-      top: 20,
+      top: 88,
       left: 16,
       right: 16,
       child: Container(
@@ -412,6 +477,111 @@ class _MapPageState extends State<MapPage> {
           message,
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+class _DayFilterBar extends StatelessWidget {
+  static const _initials = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  final Set<int> selectedDays;
+  final ValueChanged<int> onToggle;
+
+  const _DayFilterBar({
+    required this.selectedDays,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Día',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(width: 10),
+          for (var day = 1; day <= _initials.length; day++) ...[
+            _DayButton(
+              day: day,
+              label: _initials[day - 1],
+              isSelected: selectedDays.contains(day),
+              selectedColor: primary,
+              onTap: () => onToggle(day),
+            ),
+            if (day < _initials.length) const SizedBox(width: 4),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DayButton extends StatelessWidget {
+  static const _size = 32.0;
+
+  final int day;
+  final String label;
+  final bool isSelected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  const _DayButton({
+    required this.day,
+    required this.label,
+    required this.isSelected,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: ValueKey('day-filter-$day'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: _size,
+        height: _size,
+        alignment: Alignment.center,
+decoration: BoxDecoration(
+            color: isSelected ? selectedColor : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+            color:
+                isSelected ? selectedColor : selectedColor.withValues(alpha: 0.3),
+            width: isSelected ? 2 : 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : selectedColor,
+          ),
         ),
       ),
     );
